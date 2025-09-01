@@ -152,6 +152,14 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 
 ## 📝 Changelog
 
+### Version 1.0.2
+
+- Replaced sidebar meta box with full-screen post-publish overlay
+- Added iframe support for LinkedIn integration
+- Enhanced AI agent automation with progress tracking
+- Improved user experience with keyboard shortcuts
+- Added tab-based LinkedIn loading options
+
 ### Version 1.0.1
 
 - Initial release

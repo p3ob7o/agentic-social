@@ -3,7 +3,7 @@
  * Plugin Name:       Agentic Social Sharing
  * Plugin URI:        https://paolobelcastro.com/agentic-social
  * Description:       A WordPress plugin to help publishers post their content to social platforms in a semi-automated manner satisfying algorithm requirements. Posting content doesn't happen via API, and links are added as a comment to the post. Every manual interaction is designed in a way that makes its handling automatically by agentic browsers possible. 
- * Version:           1.0.1
+ * Version:           1.0.2
  * Requires at least: 5.8
  * Requires PHP:      7.4
  * Author:            Paolo Belcastro
@@ -26,7 +26,7 @@ if ( ! defined( 'WPINC' ) ) {
  * Start at version 1.0.0 and use SemVer - https://semver.org
  * Rename this for your plugin and update it as you release new versions.
  */
-define( 'AGENTIC_SOCIAL_VERSION', '1.0.1' );
+define( 'AGENTIC_SOCIAL_VERSION', '1.0.2' );
 
 /**
  * Plugin directory path.
