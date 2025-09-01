@@ -121,6 +121,11 @@ class Agentic_Social {
 		 */
 		require_once AGENTIC_SOCIAL_PLUGIN_DIR . 'public/class-agentic-social-public.php';
 
+		/**
+		 * The class responsible for content processing and summary generation.
+		 */
+		require_once AGENTIC_SOCIAL_PLUGIN_DIR . 'includes/class-agentic-social-content-processor.php';
+
 		$this->loader = new Agentic_Social_Loader();
 
 	}
@@ -166,6 +171,15 @@ class Agentic_Social {
 		// Add meta boxes to post editor
 		$this->loader->add_action( 'add_meta_boxes', $plugin_admin, 'add_meta_boxes' );
 		$this->loader->add_action( 'save_post', $plugin_admin, 'save_post_meta' );
+		
+		// Register settings
+		$this->loader->add_action( 'admin_init', $plugin_admin, 'register_settings' );
+		
+		// Add AJAX handlers
+		$this->loader->add_action( 'wp_ajax_agentic_social_generate_summary', $plugin_admin, 'ajax_generate_summary' );
+		$this->loader->add_action( 'wp_ajax_agentic_social_share_post', $plugin_admin, 'ajax_share_post' );
+		$this->loader->add_action( 'wp_ajax_agentic_social_get_share_data', $plugin_admin, 'ajax_get_share_data' );
+		$this->loader->add_action( 'wp_ajax_agentic_social_mark_complete', $plugin_admin, 'ajax_mark_complete' );
 
 	}
 
