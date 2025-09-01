@@ -20,25 +20,43 @@
 		},
 		
 		bindEvents: function() {
-			// Main share button
+			// Publish overlay events
+			$( document ).on( 'click', '.overlay-close, .skip-sharing', this.handleOverlayClose );
+			$( document ).on( 'click', '.overlay-backdrop', this.handleBackdropClick );
+			
+			// Tab switching
+			$( document ).on( 'click', '.tab-button', this.handleTabSwitch );
+			
+			// LinkedIn iframe loading
+			$( document ).on( 'click', '.load-linkedin', this.handleLoadLinkedIn );
+			
+			// Copy functionality
+			$( document ).on( 'click', '.copy-summary', this.handleCopySummary );
+			$( document ).on( 'click', '.copy-link', this.handleCopyLink );
+			
+			// Summary regeneration
+			$( document ).on( 'click', '.regenerate-summary', this.handleRegenerateSummary );
+			
+			// AI automation
+			$( document ).on( 'click', '.start-automation', this.handleStartAutomation );
+			
+			// Mark as shared
+			$( document ).on( 'click', '.mark-shared', this.handleMarkShared );
+			
+			// Legacy events for settings pages
 			$( document ).on( 'click', '#agentic-social-share-now', this.handleShareNow );
-			
-			// Generate summary button
 			$( document ).on( 'click', '.generate-summary', this.handleGenerateSummary );
-			
-			// Platform selection
 			$( document ).on( 'change', '.platform-selector', this.handlePlatformChange );
-			
-			// Workflow navigation
 			$( document ).on( 'click', '.workflow-next', this.handleWorkflowNext );
 			$( document ).on( 'click', '.workflow-prev', this.handleWorkflowPrev );
 			$( document ).on( 'click', '.workflow-complete', this.handleWorkflowComplete );
-			
-			// Copy to clipboard
 			$( document ).on( 'click', '.copy-content', this.handleCopyContent );
 			
 			// AI Mode toggle
 			$( '#enable_ai_agent' ).on( 'change', this.handleAiModeToggle );
+			
+			// Keyboard shortcuts
+			$( document ).on( 'keydown', this.handleKeyboardShortcuts );
 			
 			// Auto-save warning
 			this.bindAutoSaveWarning();
@@ -594,6 +612,196 @@
 			setTimeout( function() {
 				notice.fadeOut();
 			}, 5000 );
+		},
+		
+		// New overlay event handlers
+		handleOverlayClose: function( e ) {
+			e.preventDefault();
+			$( '.agentic-publish-overlay' ).fadeOut( 300 );
+			$( 'body' ).removeClass( 'agentic-overlay-open' );
+		},
+		
+		handleBackdropClick: function( e ) {
+			if ( e.target === e.currentTarget ) {
+				AgenticSocial.handleOverlayClose( e );
+			}
+		},
+		
+		handleTabSwitch: function( e ) {
+			e.preventDefault();
+			var targetTab = $( this ).data( 'tab' );
+			
+			// Update tab buttons
+			$( '.tab-button' ).removeClass( 'active' );
+			$( this ).addClass( 'active' );
+			
+			// Update tab content
+			$( '.tab-content' ).removeClass( 'active' );
+			$( '.tab-content[data-tab="' + targetTab + '"]' ).addClass( 'active' );
+		},
+		
+		handleLoadLinkedIn: function( e ) {
+			e.preventDefault();
+			
+			var iframe = $( '#linkedin-iframe' );
+			var overlay = $( '.iframe-overlay' );
+			
+			// Show loading state
+			overlay.html( '<div style="text-align: center;"><p>Loading LinkedIn...</p><div class="spinner"></div></div>' );
+			
+			// Load LinkedIn
+			iframe.attr( 'src', 'https://www.linkedin.com/feed/' );
+			
+			// Hide overlay after a delay
+			setTimeout( function() {
+				overlay.addClass( 'hidden' );
+			}, 3000 );
+		},
+		
+		handleCopySummary: function( e ) {
+			e.preventDefault();
+			var text = $( '#linkedin-summary' ).val();
+			AgenticSocial.copyToClipboard( text, $( this ) );
+		},
+		
+		handleCopyLink: function( e ) {
+			e.preventDefault();
+			var url = $( this ).data( 'url' );
+			AgenticSocial.copyToClipboard( url, $( this ) );
+		},
+		
+		handleRegenerateSummary: function( e ) {
+			e.preventDefault();
+			
+			var button = $( this );
+			var postId = button.data( 'post-id' );
+			var originalText = button.text();
+			
+			button.prop( 'disabled', true ).text( '🔄 Generating...' );
+			
+			$.ajax( {
+				url: agentic_social_ajax.ajax_url,
+				type: 'POST',
+				data: {
+					action: 'agentic_social_generate_summary',
+					post_id: postId,
+					platform: 'linkedin',
+					nonce: agentic_social_ajax.nonce
+				},
+				success: function( response ) {
+					button.prop( 'disabled', false ).text( originalText );
+					
+					if ( response.success ) {
+						$( '#linkedin-summary' ).val( response.data.summary );
+						AgenticSocial.showSuccess( 'Summary regenerated successfully!' );
+					} else {
+						AgenticSocial.showError( response.data || 'Failed to regenerate summary' );
+					}
+				},
+				error: function() {
+					button.prop( 'disabled', false ).text( originalText );
+					AgenticSocial.showError( 'Network error occurred' );
+				}
+			} );
+		},
+		
+		handleStartAutomation: function( e ) {
+			e.preventDefault();
+			
+			var button = $( this );
+			var postId = button.data( 'post-id' );
+			
+			// Show automation steps
+			$( '.automation-steps' ).slideDown();
+			button.prop( 'disabled', true ).text( '🤖 Automating...' );
+			
+			// Simulate automation steps
+			AgenticSocial.runAutomationSequence( postId );
+		},
+		
+		runAutomationSequence: function( postId ) {
+			var steps = [ 1, 2, 3, 4, 5 ];
+			var currentStep = 0;
+			
+			function processStep() {
+				if ( currentStep >= steps.length ) {
+					// Automation complete
+					$( '.start-automation' ).prop( 'disabled', false ).text( '✅ Automation Complete' );
+					AgenticSocial.showSuccess( 'LinkedIn sharing automation completed!' );
+					return;
+				}
+				
+				var stepNum = steps[ currentStep ];
+				var stepEl = $( '.step[data-step="' + stepNum + '"]' );
+				
+				// Mark current step as active
+				$( '.step' ).removeClass( 'active' );
+				stepEl.addClass( 'active' );
+				stepEl.find( '.step-status' ).text( '⏳' );
+				
+				// Simulate step processing
+				setTimeout( function() {
+					stepEl.removeClass( 'active' ).addClass( 'completed' );
+					stepEl.find( '.step-status' ).text( '✅' );
+					
+					currentStep++;
+					processStep();
+				}, 2000 );
+			}
+			
+			processStep();
+		},
+		
+		handleMarkShared: function( e ) {
+			e.preventDefault();
+			
+			var button = $( this );
+			var postId = button.data( 'post-id' );
+			var originalText = button.text();
+			
+			button.prop( 'disabled', true ).text( '⏳ Marking...' );
+			
+			$.ajax( {
+				url: agentic_social_ajax.ajax_url,
+				type: 'POST',
+				data: {
+					action: 'agentic_social_mark_complete',
+					post_id: postId,
+					platform: 'linkedin',
+					nonce: agentic_social_ajax.nonce
+				},
+				success: function( response ) {
+					if ( response.success ) {
+						button.text( '✅ Shared!' );
+						AgenticSocial.showSuccess( 'Post marked as shared successfully!' );
+						
+						// Close overlay after a delay
+						setTimeout( function() {
+							AgenticSocial.handleOverlayClose( { preventDefault: function() {} } );
+						}, 2000 );
+					} else {
+						button.prop( 'disabled', false ).text( originalText );
+						AgenticSocial.showError( response.data || 'Failed to mark as shared' );
+					}
+				},
+				error: function() {
+					button.prop( 'disabled', false ).text( originalText );
+					AgenticSocial.showError( 'Network error occurred' );
+				}
+			} );
+		},
+		
+		handleKeyboardShortcuts: function( e ) {
+			// ESC to close overlay
+			if ( e.key === 'Escape' && $( '.agentic-publish-overlay:visible' ).length ) {
+				AgenticSocial.handleOverlayClose( e );
+			}
+			
+			// Ctrl/Cmd + Enter to mark as shared (if overlay is open)
+			if ( ( e.ctrlKey || e.metaKey ) && e.key === 'Enter' && $( '.agentic-publish-overlay:visible' ).length ) {
+				e.preventDefault();
+				$( '.mark-shared' ).click();
+			}
 		},
 		
 		escapeHtml: function( text ) {

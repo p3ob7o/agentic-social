@@ -204,287 +204,551 @@ class Agentic_Social_Admin {
 	}
 	
 	/**
-	 * Add meta boxes to post editor.
+	 * Handle post publish event.
 	 *
-	 * @since    1.0.0
+	 * @since    1.0.1
+	 * @param    string  $new_status New post status.
+	 * @param    string  $old_status Old post status.
+	 * @param    WP_Post $post       Post object.
 	 */
-	public function add_meta_boxes() {
-		$settings = get_option( 'agentic_social_settings' );
-		$post_types = isset( $settings['default_post_types'] ) ? $settings['default_post_types'] : array( 'post' );
-		
-		foreach ( $post_types as $post_type ) {
-			add_meta_box(
-				'agentic_social_meta_box',
-				__( 'Agentic Social Sharing', 'agentic-social' ),
-				array( $this, 'render_meta_box' ),
-				$post_type,
-				'side',
-				'high'
-			);
+	public function handle_post_publish( $new_status, $old_status, $post ) {
+		// Only trigger on publish (not updates)
+		if ( $new_status !== 'publish' || $old_status === 'publish' ) {
+			return;
 		}
+		
+		// Check if this post type is enabled for sharing
+		$settings = get_option( 'agentic_social_settings', array() );
+		$enabled_types = isset( $settings['default_post_types'] ) ? $settings['default_post_types'] : array( 'post' );
+		
+		if ( ! in_array( $post->post_type, $enabled_types, true ) ) {
+			return;
+		}
+		
+		// Check if LinkedIn sharing is enabled
+		if ( ! isset( $settings['linkedin_enabled'] ) || ! $settings['linkedin_enabled'] ) {
+			return;
+		}
+		
+		// Store post ID in transient to trigger overlay
+		set_transient( 'agentic_social_show_overlay_' . get_current_user_id(), $post->ID, 300 ); // 5 minutes
 	}
 	
 	/**
-	 * Render meta box content.
+	 * Add publish overlay to admin footer.
 	 *
-	 * @since    1.0.0
-	 * @param    WP_Post    $post    The post object.
+	 * @since    1.0.1
 	 */
-	public function render_meta_box( $post ) {
-		// Add nonce for security
-		wp_nonce_field( 'agentic_social_meta_box', 'agentic_social_meta_box_nonce' );
+	public function add_publish_overlay() {
+		// Only show on edit screens
+		$screen = get_current_screen();
+		if ( ! $screen || ! in_array( $screen->base, array( 'post', 'page' ), true ) ) {
+			return;
+		}
 		
-		// Get existing values
-		$share_status = get_post_meta( $post->ID, '_agentic_social_share_status', true );
-		$linkedin_id = get_post_meta( $post->ID, '_agentic_social_linkedin_id', true );
-		$custom_message = get_post_meta( $post->ID, '_agentic_social_custom_message', true );
+		// Check if we should show the overlay
+		$post_id = get_transient( 'agentic_social_show_overlay_' . get_current_user_id() );
+		if ( ! $post_id ) {
+			return;
+		}
 		
-		// Get settings for AI mode check
+		// Clear the transient
+		delete_transient( 'agentic_social_show_overlay_' . get_current_user_id() );
+		
+		// Get post data
+		$post = get_post( $post_id );
+		if ( ! $post ) {
+			return;
+		}
+		
+		// Get settings
 		$settings = get_option( 'agentic_social_settings', array() );
 		$ai_mode = isset( $settings['enable_ai_agent'] ) && $settings['enable_ai_agent'];
-		$linkedin_enabled = isset( $settings['linkedin_enabled'] ) && $settings['linkedin_enabled'];
 		
-		// Get sharing history for this post
-		$post_shares = get_post_meta( $post->ID, '_agentic_social_shares', true );
-		if ( ! is_array( $post_shares ) ) {
-			$post_shares = array();
-		}
+		// Generate summary immediately
+		$sharing_data = Agentic_Social_Content_Processor::get_sharing_data( $post_id );
+		
 		?>
-		<div class="agentic-social-meta-box<?php echo $ai_mode ? ' agentic-ai-mode' : ''; ?>">
-			
-			<!-- Share Status -->
-			<div class="share-status-section">
-				<p>
-					<label for="agentic_social_share_status">
-						<input type="checkbox" name="agentic_social_share_status" id="agentic_social_share_status" value="1" <?php checked( $share_status, '1' ); ?> />
-						<?php esc_html_e( 'Enable social media sharing for this post', 'agentic-social' ); ?>
-					</label>
-				</p>
-			</div>
-			
-			<!-- Platform Selection -->
-			<?php if ( $linkedin_enabled ) : ?>
-				<div class="platform-selection">
-					<label for="platform_selector">
-						<?php esc_html_e( 'Platform:', 'agentic-social' ); ?>
-					</label>
-					<select name="platform_selector" id="platform_selector" class="platform-selector" <?php echo $ai_mode ? 'data-agentic-action="select-platform"' : ''; ?>>
-						<option value="linkedin"><?php esc_html_e( 'LinkedIn', 'agentic-social' ); ?></option>
-					</select>
+		<div id="agentic-social-publish-overlay" class="agentic-publish-overlay" style="display: none;">
+			<div class="overlay-backdrop"></div>
+			<div class="overlay-content">
+				<div class="overlay-header">
+					<h2><?php esc_html_e( '🎉 Post Published Successfully!', 'agentic-social' ); ?></h2>
+					<p><?php esc_html_e( 'Share your content on LinkedIn to maximize reach', 'agentic-social' ); ?></p>
+					<button class="overlay-close" aria-label="<?php esc_attr_e( 'Close', 'agentic-social' ); ?>">&times;</button>
 				</div>
-			<?php endif; ?>
-			
-			<!-- Custom Message -->
-			<div class="custom-message-section">
-				<label for="agentic_social_custom_message">
-					<?php esc_html_e( 'Custom Message (optional):', 'agentic-social' ); ?>
-				</label>
-				<textarea name="agentic_social_custom_message" id="agentic_social_custom_message" rows="3" placeholder="<?php esc_attr_e( 'Leave empty to auto-generate from post content...', 'agentic-social' ); ?>"><?php echo esc_textarea( $custom_message ); ?></textarea>
-				<button type="button" class="button generate-summary" data-post-id="<?php echo esc_attr( $post->ID ); ?>" data-platform="linkedin">
-					<?php esc_html_e( '✨ Generate Summary', 'agentic-social' ); ?>
-				</button>
-			</div>
-			
-			<!-- Sharing History -->
-			<?php if ( ! empty( $post_shares ) ) : ?>
-				<div class="sharing-history">
-					<h4><?php esc_html_e( 'Sharing History', 'agentic-social' ); ?></h4>
-					<?php foreach ( $post_shares as $platform => $share_data ) : ?>
-						<div class="share-entry">
-							<span class="platform-badge platform-<?php echo esc_attr( $platform ); ?>">
-								<?php echo esc_html( ucfirst( $platform ) ); ?>
-							</span>
-							<span class="status-badge status-<?php echo esc_attr( $share_data['status'] === 'completed' ? 'success' : ( $share_data['status'] === 'failed' ? 'error' : 'warning' ) ); ?>">
-								<?php echo esc_html( ucfirst( $share_data['status'] ) ); ?>
-							</span>
-							<span class="share-date">
-								<?php echo esc_html( mysql2date( 'M j, Y g:i a', $share_data['timestamp'] ) ); ?>
-							</span>
-						</div>
-					<?php endforeach; ?>
-				</div>
-			<?php endif; ?>
-			
-			<!-- LinkedIn Post ID Display -->
-			<?php if ( $linkedin_id ) : ?>
-				<div class="linkedin-post-info">
-					<p>
-						<strong><?php esc_html_e( 'LinkedIn Post ID:', 'agentic-social' ); ?></strong><br>
-						<code><?php echo esc_html( $linkedin_id ); ?></code>
-					</p>
-				</div>
-			<?php endif; ?>
-			
-			<!-- Action Buttons -->
-			<div class="action-buttons">
-				<button type="button" class="button button-primary" id="agentic-social-share-now" 
-				        data-post-id="<?php echo esc_attr( $post->ID ); ?>"
-				        <?php echo $ai_mode ? 'data-agentic-action="start-sharing"' : ''; ?>>
-					<?php esc_html_e( '🚀 Share Now', 'agentic-social' ); ?>
-				</button>
 				
-				<?php if ( $ai_mode ) : ?>
-					<p class="ai-mode-notice">
-						<span class="ai-agent-indicator"><?php esc_html_e( '🤖 AI Mode Active', 'agentic-social' ); ?></span><br>
-						<em><?php esc_html_e( 'This interface is optimized for AI agent interaction.', 'agentic-social' ); ?></em>
-					</p>
-				<?php endif; ?>
-			</div>
-			
-			<!-- Quick Preview -->
-			<div class="sharing-preview" style="display: none;">
-				<h4><?php esc_html_e( 'Sharing Preview', 'agentic-social' ); ?></h4>
-				<div class="preview-content">
-					<div class="preview-summary"></div>
-					<div class="preview-url"><?php echo esc_html( get_permalink( $post->ID ) ); ?></div>
+				<div class="overlay-body">
+					<div class="sharing-section">
+						<div class="post-info">
+							<h3><?php echo esc_html( $post->post_title ); ?></h3>
+							<p class="post-url"><?php echo esc_html( get_permalink( $post_id ) ); ?></p>
+						</div>
+						
+						<div class="summary-section">
+							<h4><?php esc_html_e( 'Generated LinkedIn Post', 'agentic-social' ); ?></h4>
+							<div class="summary-container">
+								<textarea id="linkedin-summary" rows="6" readonly><?php echo esc_textarea( $sharing_data['linkedin_summary'] ); ?></textarea>
+								<div class="summary-actions">
+									<button type="button" class="button regenerate-summary" data-post-id="<?php echo esc_attr( $post_id ); ?>">
+										<?php esc_html_e( '🔄 Regenerate', 'agentic-social' ); ?>
+									</button>
+									<button type="button" class="button copy-summary">
+										<?php esc_html_e( '📋 Copy Text', 'agentic-social' ); ?>
+									</button>
+								</div>
+							</div>
+						</div>
+						
+						<div class="linkedin-section">
+							<div class="linkedin-options">
+								<div class="option-tabs">
+									<button class="tab-button active" data-tab="iframe"><?php esc_html_e( '🌐 LinkedIn (Embedded)', 'agentic-social' ); ?></button>
+									<button class="tab-button" data-tab="newwindow"><?php esc_html_e( '🔗 LinkedIn (New Window)', 'agentic-social' ); ?></button>
+								</div>
+								
+								<div class="tab-content active" data-tab="iframe">
+									<div class="iframe-container">
+										<iframe id="linkedin-iframe" src="about:blank" frameborder="0"></iframe>
+										<div class="iframe-overlay">
+											<button class="button button-primary load-linkedin" 
+											        <?php echo $ai_mode ? 'data-agentic-action="load-linkedin"' : ''; ?>>
+												<?php esc_html_e( '📱 Load LinkedIn', 'agentic-social' ); ?>
+											</button>
+											<p><?php esc_html_e( 'Click to load LinkedIn in the frame below', 'agentic-social' ); ?></p>
+										</div>
+									</div>
+								</div>
+								
+								<div class="tab-content" data-tab="newwindow">
+									<div class="newwindow-actions">
+										<a href="https://www.linkedin.com/feed/" target="_blank" class="button button-primary"
+										   <?php echo $ai_mode ? 'data-agentic-action="open-linkedin-window"' : ''; ?>>
+											<?php esc_html_e( '🚀 Open LinkedIn', 'agentic-social' ); ?>
+										</a>
+										<p><?php esc_html_e( 'Opens LinkedIn in a new window/tab', 'agentic-social' ); ?></p>
+									</div>
+								</div>
+							</div>
+						</div>
+						
+						<?php if ( $ai_mode ) : ?>
+							<div class="ai-automation-section">
+								<h4><?php esc_html_e( '🤖 AI Agent Automation', 'agentic-social' ); ?></h4>
+								<div class="automation-controls">
+									<button type="button" class="button button-primary start-automation"
+									        data-post-id="<?php echo esc_attr( $post_id ); ?>"
+									        data-agentic-action="start-full-automation">
+										<?php esc_html_e( '⚡ Automate Full Process', 'agentic-social' ); ?>
+									</button>
+									<p><?php esc_html_e( 'Let AI agent handle the complete LinkedIn sharing process', 'agentic-social' ); ?></p>
+								</div>
+								
+								<div class="automation-steps" style="display: none;">
+									<div class="step-progress">
+										<div class="step" data-step="1">
+											<span class="step-number">1</span>
+											<span class="step-text"><?php esc_html_e( 'Opening LinkedIn', 'agentic-social' ); ?></span>
+											<span class="step-status">⏳</span>
+										</div>
+										<div class="step" data-step="2">
+											<span class="step-number">2</span>
+											<span class="step-text"><?php esc_html_e( 'Creating Post', 'agentic-social' ); ?></span>
+											<span class="step-status">⏳</span>
+										</div>
+										<div class="step" data-step="3">
+											<span class="step-number">3</span>
+											<span class="step-text"><?php esc_html_e( 'Adding Content', 'agentic-social' ); ?></span>
+											<span class="step-status">⏳</span>
+										</div>
+										<div class="step" data-step="4">
+											<span class="step-number">4</span>
+											<span class="step-text"><?php esc_html_e( 'Publishing', 'agentic-social' ); ?></span>
+											<span class="step-status">⏳</span>
+										</div>
+										<div class="step" data-step="5">
+											<span class="step-number">5</span>
+											<span class="step-text"><?php esc_html_e( 'Adding Link Comment', 'agentic-social' ); ?></span>
+											<span class="step-status">⏳</span>
+										</div>
+									</div>
+								</div>
+							</div>
+						<?php endif; ?>
+						
+						<div class="manual-instructions">
+							<h4><?php esc_html_e( '📝 Manual Steps', 'agentic-social' ); ?></h4>
+							<ol>
+								<li><?php esc_html_e( 'Copy the generated text above', 'agentic-social' ); ?></li>
+								<li><?php esc_html_e( 'Open LinkedIn (using button above)', 'agentic-social' ); ?></li>
+								<li><?php esc_html_e( 'Click "Start a post" on LinkedIn', 'agentic-social' ); ?></li>
+								<li><?php esc_html_e( 'Paste the copied content', 'agentic-social' ); ?></li>
+								<li><?php esc_html_e( 'Publish your post', 'agentic-social' ); ?></li>
+								<li><?php esc_html_e( 'Add this link as first comment:', 'agentic-social' ); ?> 
+									<code class="post-link-for-comment"><?php echo esc_html( get_permalink( $post_id ) ); ?></code>
+									<button class="button copy-link" data-url="<?php echo esc_attr( get_permalink( $post_id ) ); ?>">
+										<?php esc_html_e( 'Copy Link', 'agentic-social' ); ?>
+									</button>
+								</li>
+							</ol>
+						</div>
+					</div>
+				</div>
+				
+				<div class="overlay-footer">
+					<button class="button mark-shared" data-post-id="<?php echo esc_attr( $post_id ); ?>">
+						<?php esc_html_e( '✅ Mark as Shared', 'agentic-social' ); ?>
+					</button>
+					<button class="button skip-sharing">
+						<?php esc_html_e( '⏭️ Skip for Now', 'agentic-social' ); ?>
+					</button>
 				</div>
 			</div>
-			
 		</div>
 		
+		<script type="text/javascript">
+		jQuery(document).ready(function($) {
+			// Show overlay immediately
+			$('#agentic-social-publish-overlay').fadeIn(300);
+			
+			// Auto-focus and scroll to top
+			$('body').addClass('agentic-overlay-open');
+			$(window).scrollTop(0);
+		});
+		</script>
+		
 		<style>
-		.agentic-social-meta-box .share-status-section {
-			margin-bottom: 15px;
-			padding-bottom: 15px;
-			border-bottom: 1px solid #e9ecef;
+		.agentic-overlay-open {
+			overflow: hidden;
 		}
 		
-		.agentic-social-meta-box .platform-selection {
-			margin-bottom: 15px;
-		}
-		
-		.agentic-social-meta-box .platform-selection select {
+		.agentic-publish-overlay {
+			position: fixed;
+			top: 0;
+			left: 0;
 			width: 100%;
-			margin-top: 5px;
+			height: 100%;
+			z-index: 999999;
+			background: rgba(0, 0, 0, 0.8);
+			backdrop-filter: blur(5px);
 		}
 		
-		.agentic-social-meta-box .custom-message-section {
-			margin-bottom: 15px;
+		.overlay-backdrop {
+			position: absolute;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
 		}
 		
-		.agentic-social-meta-box .custom-message-section textarea {
-			margin-top: 5px;
-			margin-bottom: 8px;
+		.overlay-content {
+			position: relative;
+			max-width: 1200px;
+			width: 95%;
+			height: 95%;
+			margin: 2.5% auto;
+			background: white;
+			border-radius: 12px;
+			box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+			display: flex;
+			flex-direction: column;
+			overflow: hidden;
 		}
 		
-		.agentic-social-meta-box .generate-summary {
-			font-size: 12px;
+		.overlay-header {
+			background: linear-gradient(135deg, #0077b5, #005885);
+			color: white;
+			padding: 20px 30px;
+			position: relative;
 		}
 		
-		.agentic-social-meta-box .sharing-history {
-			margin-bottom: 15px;
-			padding: 10px;
-			background: #f8f9fa;
-			border-radius: 4px;
+		.overlay-header h2 {
+			margin: 0 0 5px 0;
+			font-size: 24px;
 		}
 		
-		.agentic-social-meta-box .sharing-history h4 {
-			margin: 0 0 10px 0;
-			font-size: 13px;
-			color: #495057;
+		.overlay-header p {
+			margin: 0;
+			opacity: 0.9;
 		}
 		
-		.agentic-social-meta-box .share-entry {
+		.overlay-close {
+			position: absolute;
+			top: 20px;
+			right: 20px;
+			background: none;
+			border: none;
+			color: white;
+			font-size: 28px;
+			cursor: pointer;
+			width: 40px;
+			height: 40px;
+			border-radius: 50%;
 			display: flex;
 			align-items: center;
-			gap: 8px;
-			margin-bottom: 5px;
-			font-size: 12px;
+			justify-content: center;
+			transition: background-color 0.2s;
 		}
 		
-		.agentic-social-meta-box .share-date {
-			color: #6c757d;
-			font-size: 11px;
+		.overlay-close:hover {
+			background-color: rgba(255, 255, 255, 0.2);
 		}
 		
-		.agentic-social-meta-box .linkedin-post-info {
-			margin-bottom: 15px;
-			padding: 10px;
-			background: #e7f3ff;
-			border-radius: 4px;
+		.overlay-body {
+			flex: 1;
+			padding: 30px;
+			overflow-y: auto;
 		}
 		
-		.agentic-social-meta-box .action-buttons {
-			text-align: center;
-		}
-		
-		.agentic-social-meta-box .ai-mode-notice {
-			margin-top: 10px;
-			font-size: 12px;
-			text-align: center;
-		}
-		
-		.agentic-social-meta-box .sharing-preview {
-			margin-top: 15px;
+		.post-info {
+			margin-bottom: 25px;
 			padding: 15px;
 			background: #f8f9fa;
-			border-radius: 4px;
-			border: 1px solid #e9ecef;
+			border-radius: 8px;
+			border-left: 4px solid #0077b5;
 		}
 		
-		.agentic-social-meta-box .sharing-preview h4 {
+		.post-info h3 {
 			margin: 0 0 10px 0;
-			font-size: 13px;
-			color: #495057;
+			color: #333;
 		}
 		
-		.agentic-social-meta-box .preview-content {
-			font-size: 13px;
-			line-height: 1.4;
+		.post-url {
+			margin: 0;
+			color: #666;
+			font-family: monospace;
+			font-size: 14px;
+			word-break: break-all;
 		}
 		
-		.agentic-social-meta-box .preview-summary {
-			margin-bottom: 10px;
-			white-space: pre-line;
+		.summary-section {
+			margin-bottom: 30px;
 		}
 		
-		.agentic-social-meta-box .preview-url {
-			color: #0073aa;
+		.summary-section h4 {
+			margin: 0 0 15px 0;
+			color: #333;
+			font-size: 18px;
+		}
+		
+		.summary-container textarea {
+			width: 100%;
+			padding: 15px;
+			border: 2px solid #e1e5e9;
+			border-radius: 8px;
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+			font-size: 14px;
+			line-height: 1.5;
+			resize: vertical;
+			min-height: 120px;
+		}
+		
+		.summary-actions {
+			margin-top: 10px;
+			display: flex;
+			gap: 10px;
+		}
+		
+		.linkedin-section {
+			margin-bottom: 30px;
+		}
+		
+		.option-tabs {
+			display: flex;
+			gap: 5px;
+			margin-bottom: 15px;
+		}
+		
+		.tab-button {
+			padding: 10px 20px;
+			background: #f1f3f4;
+			border: none;
+			border-radius: 6px;
+			cursor: pointer;
+			font-weight: 500;
+			transition: all 0.2s;
+		}
+		
+		.tab-button.active {
+			background: #0077b5;
+			color: white;
+		}
+		
+		.tab-content {
+			display: none;
+		}
+		
+		.tab-content.active {
+			display: block;
+		}
+		
+		.iframe-container {
+			position: relative;
+			width: 100%;
+			height: 500px;
+			border: 2px solid #e1e5e9;
+			border-radius: 8px;
+			overflow: hidden;
+		}
+		
+		.iframe-container iframe {
+			width: 100%;
+			height: 100%;
+		}
+		
+		.iframe-overlay {
+			position: absolute;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			background: rgba(255, 255, 255, 0.95);
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			gap: 15px;
+		}
+		
+		.iframe-overlay.hidden {
+			display: none;
+		}
+		
+		.newwindow-actions {
+			text-align: center;
+			padding: 40px;
+			background: #f8f9fa;
+			border-radius: 8px;
+		}
+		
+		.ai-automation-section {
+			margin-bottom: 30px;
+			padding: 20px;
+			background: linear-gradient(135deg, #f0f8ff, #e6f3ff);
+			border-radius: 8px;
+			border: 1px solid #b8daff;
+		}
+		
+		.ai-automation-section h4 {
+			margin: 0 0 15px 0;
+			color: #0c5460;
+		}
+		
+		.automation-controls {
+			text-align: center;
+		}
+		
+		.step-progress {
+			margin-top: 20px;
+		}
+		
+		.step {
+			display: flex;
+			align-items: center;
+			gap: 15px;
+			padding: 10px;
+			margin-bottom: 5px;
+			background: white;
+			border-radius: 6px;
+		}
+		
+		.step-number {
+			width: 30px;
+			height: 30px;
+			background: #e9ecef;
+			border-radius: 50%;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-weight: bold;
+			font-size: 14px;
+		}
+		
+		.step.active .step-number {
+			background: #ffc107;
+			color: #212529;
+		}
+		
+		.step.completed .step-number {
+			background: #28a745;
+			color: white;
+		}
+		
+		.step-text {
+			flex: 1;
+		}
+		
+		.step-status {
+			font-size: 18px;
+		}
+		
+		.manual-instructions {
+			background: #fff3cd;
+			padding: 20px;
+			border-radius: 8px;
+			border: 1px solid #ffeaa7;
+		}
+		
+		.manual-instructions h4 {
+			margin: 0 0 15px 0;
+			color: #856404;
+		}
+		
+		.manual-instructions ol {
+			margin: 0;
+			padding-left: 20px;
+		}
+		
+		.manual-instructions li {
+			margin-bottom: 8px;
+			line-height: 1.5;
+		}
+		
+		.post-link-for-comment {
+			display: inline-block;
+			background: #f8f9fa;
+			padding: 4px 8px;
+			border-radius: 4px;
 			font-family: monospace;
 			font-size: 12px;
-			word-break: break-all;
+			margin: 0 5px;
+		}
+		
+		.overlay-footer {
+			background: #f8f9fa;
+			padding: 20px 30px;
+			border-top: 1px solid #e9ecef;
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+		}
+		
+		@media (max-width: 768px) {
+			.overlay-content {
+				width: 100%;
+				height: 100%;
+				margin: 0;
+				border-radius: 0;
+			}
+			
+			.overlay-header, .overlay-body, .overlay-footer {
+				padding: 15px 20px;
+			}
+			
+			.iframe-container {
+				height: 300px;
+			}
+			
+			.overlay-footer {
+				flex-direction: column;
+				gap: 10px;
+			}
 		}
 		</style>
 		<?php
 	}
 	
-	/**
-	 * Save meta box data.
-	 *
-	 * @since    1.0.0
-	 * @param    int    $post_id    The ID of the post being saved.
-	 */
-	public function save_post_meta( $post_id ) {
-		// Check if nonce is set
-		if ( ! isset( $_POST['agentic_social_meta_box_nonce'] ) ) {
-			return;
-		}
-		
-		// Verify nonce
-		if ( ! wp_verify_nonce( $_POST['agentic_social_meta_box_nonce'], 'agentic_social_meta_box' ) ) {
-			return;
-		}
-		
-		// Check if this is an autosave
-		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
-			return;
-		}
-		
-		// Check user permissions
-		if ( ! current_user_can( 'edit_post', $post_id ) ) {
-			return;
-		}
-		
-		// Save share status
-		$share_status = isset( $_POST['agentic_social_share_status'] ) ? '1' : '0';
-		update_post_meta( $post_id, '_agentic_social_share_status', $share_status );
-		
-		// Save custom message
-		if ( isset( $_POST['agentic_social_custom_message'] ) ) {
-			$custom_message = sanitize_textarea_field( $_POST['agentic_social_custom_message'] );
-			update_post_meta( $post_id, '_agentic_social_custom_message', $custom_message );
-		}
-	}
+
 	
 	/**
 	 * Register plugin settings.

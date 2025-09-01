@@ -168,9 +168,9 @@ class Agentic_Social {
 		$plugin_basename = AGENTIC_SOCIAL_PLUGIN_BASENAME;
 		$this->loader->add_filter( 'plugin_action_links_' . $plugin_basename, $plugin_admin, 'add_action_links' );
 		
-		// Add meta boxes to post editor
-		$this->loader->add_action( 'add_meta_boxes', $plugin_admin, 'add_meta_boxes' );
-		$this->loader->add_action( 'save_post', $plugin_admin, 'save_post_meta' );
+		// Add post publish hooks instead of meta boxes
+		$this->loader->add_action( 'transition_post_status', $plugin_admin, 'handle_post_publish', 10, 3 );
+		$this->loader->add_action( 'admin_footer', $plugin_admin, 'add_publish_overlay' );
 		
 		// Register settings
 		$this->loader->add_action( 'admin_init', $plugin_admin, 'register_settings' );
