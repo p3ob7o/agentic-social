@@ -230,8 +230,11 @@ class Agentic_Social_Admin {
 			return;
 		}
 		
-		// Store post ID in transient to trigger overlay
-		set_transient( 'agentic_social_show_overlay_' . get_current_user_id(), $post->ID, 300 ); // 5 minutes
+		// Mark this post as just published
+		update_post_meta( $post->ID, '_agentic_social_just_published', time() );
+		
+		// Set a flag in user meta to show overlay on next page load
+		update_user_meta( get_current_user_id(), 'agentic_social_show_overlay', $post->ID );
 	}
 	
 	/**
@@ -246,14 +249,41 @@ class Agentic_Social_Admin {
 			return;
 		}
 		
-		// Check if we should show the overlay
-		$post_id = get_transient( 'agentic_social_show_overlay_' . get_current_user_id() );
+		// Check if we should show the overlay - either from user meta or URL parameter
+		$post_id = get_user_meta( get_current_user_id(), 'agentic_social_show_overlay', true );
+		
+		// Also check if we're on a post that was just published (within last 2 minutes)
+		if ( ! $post_id && isset( $_GET['post'] ) ) {
+			$current_post_id = absint( $_GET['post'] );
+			$published_time = get_post_meta( $current_post_id, '_agentic_social_just_published', true );
+			
+			if ( $published_time && ( time() - $published_time ) < 120 ) {
+				$post_id = $current_post_id;
+				// Clean up the meta
+				delete_post_meta( $current_post_id, '_agentic_social_just_published' );
+			}
+		}
+		
+		// Also check URL parameter for message=1 which indicates post was just published
+		if ( ! $post_id && isset( $_GET['message'] ) && $_GET['message'] == '1' && isset( $_GET['post'] ) ) {
+			$current_post_id = absint( $_GET['post'] );
+			$post = get_post( $current_post_id );
+			
+			// Check if this is a recently published post (within last 5 minutes)
+			if ( $post && $post->post_status === 'publish' ) {
+				$post_date = strtotime( $post->post_date );
+				if ( ( time() - $post_date ) < 300 ) {
+					$post_id = $current_post_id;
+				}
+			}
+		}
+		
 		if ( ! $post_id ) {
 			return;
 		}
 		
-		// Clear the transient
-		delete_transient( 'agentic_social_show_overlay_' . get_current_user_id() );
+		// Clear the user meta flag
+		delete_user_meta( get_current_user_id(), 'agentic_social_show_overlay' );
 		
 		// Get post data
 		$post = get_post( $post_id );
@@ -261,8 +291,22 @@ class Agentic_Social_Admin {
 			return;
 		}
 		
-		// Get settings
+		// Get settings and check if we should show overlay
 		$settings = get_option( 'agentic_social_settings', array() );
+		
+		// Check if LinkedIn is enabled
+		if ( ! isset( $settings['linkedin_enabled'] ) || ! $settings['linkedin_enabled'] ) {
+			// LinkedIn not enabled, don't show overlay
+			return;
+		}
+		
+		// Check if this post type is enabled
+		$enabled_types = isset( $settings['default_post_types'] ) ? $settings['default_post_types'] : array( 'post' );
+		if ( ! in_array( $post->post_type, $enabled_types, true ) ) {
+			// Post type not enabled for sharing
+			return;
+		}
+		
 		$ai_mode = isset( $settings['enable_ai_agent'] ) && $settings['enable_ai_agent'];
 		
 		// Generate summary immediately
@@ -409,11 +453,11 @@ class Agentic_Social_Admin {
 		<script type="text/javascript">
 		jQuery(document).ready(function($) {
 			// Show overlay immediately
-			$('#agentic-social-publish-overlay').fadeIn(300);
-			
-			// Auto-focus and scroll to top
-			$('body').addClass('agentic-overlay-open');
-			$(window).scrollTop(0);
+			setTimeout(function() {
+				$('#agentic-social-publish-overlay').fadeIn(300);
+				$('body').addClass('agentic-overlay-open');
+				$(window).scrollTop(0);
+			}, 500); // Small delay to ensure page is fully loaded
 		});
 		</script>
 		
@@ -749,6 +793,49 @@ class Agentic_Social_Admin {
 	}
 	
 
+	
+	/**
+	 * Add admin bar button for manual trigger.
+	 *
+	 * @since    1.0.2
+	 * @param    WP_Admin_Bar $wp_admin_bar The admin bar object.
+	 */
+	public function add_admin_bar_button( $wp_admin_bar ) {
+		// Only show on single post edit screens
+		$screen = get_current_screen();
+		if ( ! $screen || ! in_array( $screen->base, array( 'post', 'page' ), true ) ) {
+			return;
+		}
+		
+		// Only show if we have a post ID
+		if ( ! isset( $_GET['post'] ) ) {
+			return;
+		}
+		
+		$post_id = absint( $_GET['post'] );
+		$post = get_post( $post_id );
+		
+		if ( ! $post || $post->post_status !== 'publish' ) {
+			return;
+		}
+		
+		// Check settings
+		$settings = get_option( 'agentic_social_settings', array() );
+		if ( ! isset( $settings['linkedin_enabled'] ) || ! $settings['linkedin_enabled'] ) {
+			return;
+		}
+		
+		// Add the button
+		$wp_admin_bar->add_node( array(
+			'id'    => 'agentic-social-share',
+			'title' => '🚀 ' . __( 'Share on LinkedIn', 'agentic-social' ),
+			'href'  => '#',
+			'meta'  => array(
+				'onclick' => 'agenticSocialShowOverlay(' . $post_id . '); return false;',
+				'title'   => __( 'Open Agentic Social sharing overlay', 'agentic-social' ),
+			),
+		) );
+	}
 	
 	/**
 	 * Register plugin settings.
@@ -1088,6 +1175,38 @@ class Agentic_Social_Admin {
 			'message' => __( 'Share marked as completed', 'agentic-social' ),
 			'post_id' => $post_id,
 			'platform' => $platform,
+		) );
+	}
+	
+	/**
+	 * AJAX handler for getting overlay HTML.
+	 *
+	 * @since    1.0.2
+	 */
+	public function ajax_get_overlay_html() {
+		// Check nonce
+		if ( ! wp_verify_nonce( $_POST['nonce'], 'agentic_social_nonce' ) ) {
+			wp_die( __( 'Security check failed', 'agentic-social' ) );
+		}
+		
+		// Check capabilities
+		if ( ! current_user_can( 'edit_posts' ) ) {
+			wp_die( __( 'You do not have permission to perform this action', 'agentic-social' ) );
+		}
+		
+		$post_id = isset( $_POST['post_id'] ) ? absint( $_POST['post_id'] ) : 0;
+		
+		if ( ! $post_id ) {
+			wp_send_json_error( __( 'Invalid post ID', 'agentic-social' ) );
+		}
+		
+		// Set the flag to show overlay
+		update_user_meta( get_current_user_id(), 'agentic_social_show_overlay', $post_id );
+		
+		// Return success and reload page
+		wp_send_json_success( array(
+			'message' => __( 'Overlay will be shown on page reload', 'agentic-social' ),
+			'reload' => true,
 		) );
 	}
 	

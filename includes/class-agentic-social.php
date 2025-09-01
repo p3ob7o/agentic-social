@@ -172,6 +172,9 @@ class Agentic_Social {
 		$this->loader->add_action( 'transition_post_status', $plugin_admin, 'handle_post_publish', 10, 3 );
 		$this->loader->add_action( 'admin_footer', $plugin_admin, 'add_publish_overlay' );
 		
+		// Add admin bar button for manual trigger
+		$this->loader->add_action( 'admin_bar_menu', $plugin_admin, 'add_admin_bar_button', 100 );
+		
 		// Register settings
 		$this->loader->add_action( 'admin_init', $plugin_admin, 'register_settings' );
 		
@@ -180,6 +183,7 @@ class Agentic_Social {
 		$this->loader->add_action( 'wp_ajax_agentic_social_share_post', $plugin_admin, 'ajax_share_post' );
 		$this->loader->add_action( 'wp_ajax_agentic_social_get_share_data', $plugin_admin, 'ajax_get_share_data' );
 		$this->loader->add_action( 'wp_ajax_agentic_social_mark_complete', $plugin_admin, 'ajax_mark_complete' );
+		$this->loader->add_action( 'wp_ajax_agentic_social_get_overlay_html', $plugin_admin, 'ajax_get_overlay_html' );
 
 	}
 

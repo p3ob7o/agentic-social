@@ -819,6 +819,28 @@
 		}
 	};
 
+	// Global function for manual trigger
+	window.agenticSocialShowOverlay = function( postId ) {
+		$.ajax( {
+			url: agentic_social_ajax.ajax_url,
+			type: 'POST',
+			data: {
+				action: 'agentic_social_get_overlay_html',
+				post_id: postId,
+				nonce: agentic_social_ajax.nonce
+			},
+			success: function( response ) {
+				if ( response.success && response.data.reload ) {
+					// Reload the page to show overlay
+					window.location.reload();
+				}
+			},
+			error: function() {
+				alert( 'Failed to trigger overlay. Please try again.' );
+			}
+		} );
+	};
+	
 	// Initialize when document is ready
 	$( document ).ready( function() {
 		AgenticSocial.init();
