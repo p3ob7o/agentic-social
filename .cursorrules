@@ -1,0 +1,135 @@
+# Cursor Rules for Agentic Social Project
+
+## Project Overview
+
+We are developing a WordPress plugin to help publishers post their content to LinkedIn (and potentially other platforms) in a semi-automated, semi-manual manner that aligns with the values the social platform's algorithms tend to enforce. Namely, that posting content doesn't happen via the API, and that links, when present, are added as a comment to the post.
+
+We design every manual interaction in a way that makes it possible to handle it automatically by an AI agentic browser like Perplexity's Comet.
+
+## WordPress PHP Coding Standards
+
+**Applies to:** `*.php` files  
+**Source:** <https://github.com/WordPress/wpcs-docs/blob/master/wordpress-coding-standards/php.md>
+
+### General Rules
+
+- Use full PHP tags (`<?php ?>`, never shorthand)
+- Single quotes for strings without variables, double quotes when evaluating content
+- No parentheses for `require`/`include` statements; use `require_once` for dependencies
+- Files should end without closing PHP tag
+
+### Naming Conventions
+
+- Variables, functions, action/filter hooks: lowercase with underscores (`some_function_name`)
+- Classes, traits, interfaces, enums: capitalized words with underscores (`WP_Error`, `Walker_Category`)
+- Constants: uppercase with underscores (`DOING_AJAX`)
+- File names: lowercase with hyphens (`my-plugin-name.php`)
+- Class files: prefix with `class-` (`class-wp-error.php`)
+
+### Whitespace & Indentation
+
+- Use tabs for indentation, spaces for mid-line alignment
+- Space after commas and around operators
+- Space inside parentheses
+- No space between function/method name and opening parenthesis
+- No trailing whitespace at line ends
+- Array items on new lines for multi-item arrays
+
+### Formatting
+
+- Always use braces for control structures
+- Arrays must use long syntax `array()` (not `[]`)
+- One space between closing parenthesis and colon in return type declarations
+- Always include trailing comma in multi-line arrays
+
+### Object-Oriented Programming
+
+- One class/interface/trait/enum per file
+- Always declare visibility (`public`, `protected`, `private`)
+- Correct modifier order (e.g., `abstract` then `readonly` for class declarations)
+- Always use parentheses for object instantiation
+
+### Control Structures
+
+- Use `elseif` (not `else if`)
+- Yoda conditions (`if ( true === $var )` not `if ( $var === true )`)
+- Use braces even for single-statement blocks
+
+### Operators
+
+- Ternary operators should test for true, not false
+- Avoid error control operator (`@`)
+- Prefer pre-increment/decrement (`++$i`) over post-increment/decrement (`$i++`)
+
+### Database
+
+- Avoid direct database queries when possible
+- Capitalize SQL keywords (`SELECT`, `UPDATE`, etc.)
+- Use `$wpdb->prepare()` for secure queries
+- Use placeholders (`%d`, `%f`, `%s`, `%i`) without quotes
+
+### Recommendations
+
+- Use descriptive string values instead of boolean flags
+- Prioritize readability over cleverness
+- Use strict comparisons (`===` and `!==`)
+- No assignments in conditionals
+- Avoid `extract()`, `eval()`, `create_function()` and backtick operators
+- Use PCRE over POSIX for regular expressions
+
+### Type Declarations
+
+- Use lowercase for scalar types (`int`, `bool`, `string`, etc.)
+- Ensure one space before and after type declarations
+- No space between nullability operator (`?`) and type
+- Obey PHP version compatibility constraints when using types
+
+## WordPress JavaScript Coding Standards
+
+**Applies to:** `*.js`, `*.jsx`, `*.ts`, `*.tsx` files  
+**Source:** <https://github.com/WordPress/wpcs-docs/blob/master/wordpress-coding-standards/javascript.md>
+
+The WordPress JavaScript Coding Standards adapt the jQuery JavaScript Style Guide with these key modifications:
+
+- Single quotes for strings instead of double quotes
+- Case statements indented within switch blocks
+- Consistent function content indentation
+- WordPress-specific whitespace rules
+- 100-character line limit encouraged but not enforced
+
+### Key Formatting Rules
+
+- Indent with tabs, not spaces
+- Liberal use of whitespace for readability
+- Braces required for all blocks (if/else/for/while/try)
+- Each statement on its own line
+- Strict equality checks (`===`) over abstract equality (`==`)
+- Single quotes for strings
+
+### Variable Declaration
+
+- ES2015+: Use `const` by default, `let` when reassignment needed
+- Pre-ES2015: Single `var` statement at top of function scope
+- CamelCase for variables and functions
+- UpperCamelCase for constructors and classes
+- SCREAMING_SNAKE_CASE for constants
+
+### Code Organization
+
+- Functions should be concise and focused
+- Multi-line statements break after operators
+- Comments precede relevant code with blank line before
+- JSDoc format for documentation
+
+### Best Practices
+
+- Array creation with `[]`, not `new Array()`
+- Object creation with `{}` unless specific prototype needed
+- Store loop maximum in variable rather than recalculating
+- Use Underscore.js collection methods for data transformations
+- Only use jQuery each() for jQuery collections
+
+### Tools
+
+- JSHint for automated code quality checking
+- Configuration in `.jshintrc` file

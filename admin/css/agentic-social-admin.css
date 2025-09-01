@@ -1,0 +1,110 @@
+/**
+ * All of the CSS for your admin-specific functionality should be
+ * included in this file.
+ */
+
+.agentic-social-meta-box {
+	padding: 10px 0;
+}
+
+.agentic-social-meta-box p {
+	margin: 10px 0;
+}
+
+.agentic-social-meta-box textarea {
+	width: 100%;
+	min-height: 60px;
+}
+
+.agentic-social-meta-box code {
+	display: inline-block;
+	padding: 2px 4px;
+	background: #f0f0f0;
+	border-radius: 3px;
+	font-size: 12px;
+}
+
+/* Settings page styles */
+.agentic-social-settings-header {
+	background: #fff;
+	border-left: 4px solid #0073aa;
+	box-shadow: 0 1px 1px rgba(0,0,0,.04);
+	margin: 20px 0;
+	padding: 12px;
+}
+
+.agentic-social-settings-header h2 {
+	margin: 0;
+	padding: 0;
+}
+
+/* Share history table */
+.agentic-social-history-table {
+	margin-top: 20px;
+}
+
+.agentic-social-history-table .status-success {
+	color: #46b450;
+	font-weight: bold;
+}
+
+.agentic-social-history-table .status-pending {
+	color: #ffb900;
+	font-weight: bold;
+}
+
+.agentic-social-history-table .status-failed {
+	color: #dc3232;
+	font-weight: bold;
+}
+
+/* LinkedIn settings */
+.linkedin-auth-section {
+	background: #fff;
+	border: 1px solid #ccd0d4;
+	border-radius: 4px;
+	padding: 20px;
+	margin: 20px 0;
+}
+
+.linkedin-auth-status {
+	display: inline-block;
+	padding: 5px 10px;
+	border-radius: 3px;
+	font-weight: bold;
+	margin-left: 10px;
+}
+
+.linkedin-auth-status.connected {
+	background: #d4edda;
+	color: #155724;
+}
+
+.linkedin-auth-status.disconnected {
+	background: #f8d7da;
+	color: #721c24;
+}
+
+/* AI Agent mode indicator */
+.ai-agent-indicator {
+	display: inline-block;
+	padding: 3px 8px;
+	background: #7c3aed;
+	color: #fff;
+	border-radius: 3px;
+	font-size: 11px;
+	text-transform: uppercase;
+	font-weight: bold;
+	margin-left: 10px;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 782px) {
+	.agentic-social-settings-header {
+		margin: 10px 0;
+	}
+	
+	.linkedin-auth-section {
+		padding: 15px;
+	}
+}

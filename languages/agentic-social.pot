@@ -1,0 +1,35 @@
+# Copyright (C) 2024 Paolo Belcastro
+# This file is distributed under the GPL v2 or later.
+msgid ""
+msgstr ""
+"Project-Id-Version: Agentic Social Sharing 1.0.0\n"
+"Report-Msgid-Bugs-To: https://paolobelcastro.com/agentic-social\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2024-01-01T00:00:00+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.9.0\n"
+"X-Domain: agentic-social\n"
+
+#. Plugin Name of the plugin
+msgid "Agentic Social Sharing"
+msgstr ""
+
+#. Plugin URI of the plugin
+msgid "https://paolobelcastro.com/agentic-social"
+msgstr ""
+
+#. Description of the plugin
+msgid "A WordPress plugin to help publishers post their content to LinkedIn and other platforms in a semi-automated manner that aligns with social platform algorithms."
+msgstr ""
+
+#. Author of the plugin
+msgid "Paolo Belcastro"
+msgstr ""
+
+#. Author URI of the plugin
+msgid "https://paolobelcastro.com"
+msgstr ""
