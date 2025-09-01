@@ -17,6 +17,7 @@
 			this.bindEvents();
 			this.checkAiMode();
 			this.initializeWorkflow();
+			this.watchGutenbergPublish();
 		},
 		
 		bindEvents: function() {
@@ -97,6 +98,44 @@
 			if ( $( '.agentic-social-workflow' ).length ) {
 				this.renderWorkflowUI();
 			}
+		},
+
+		watchGutenbergPublish: function() {
+			// Detect Gutenberg publish without full page reload and trigger overlay
+			if ( typeof window.wp === 'undefined' || ! wp.data || ! wp.data.select ) {
+				return;
+			}
+
+			var selector;
+			try {
+				selector = wp.data.select( 'core/editor' );
+			} catch ( e ) {
+				return;
+			}
+
+			if ( ! selector || typeof wp.data.subscribe !== 'function' ) {
+				return;
+			}
+
+			var wasSaving = selector.isSavingPost();
+			var overlayTriggered = false;
+
+			wp.data.subscribe( function() {
+				var isSaving = selector.isSavingPost();
+				var isPublished = selector.isCurrentPostPublished && selector.isCurrentPostPublished();
+
+				// Detect transition: was saving -> not saving and post is published now
+				if ( wasSaving && ! isSaving && isPublished && ! overlayTriggered ) {
+					overlayTriggered = true;
+					var postId = selector.getCurrentPostId ? selector.getCurrentPostId() : ( $( '#post_ID' ).val() || null );
+					if ( typeof window.agenticSocialShowOverlay === 'function' && postId ) {
+						// Use existing endpoint to set flag and reload so PHP can inject the overlay
+						window.agenticSocialShowOverlay( postId );
+					}
+				}
+
+				wasSaving = isSaving;
+			} );
 		},
 		
 		handleShareNow: function( e ) {
