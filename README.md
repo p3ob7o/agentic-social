@@ -181,14 +181,14 @@ This project is licensed under the GPL v2 or later - see the [LICENSE](LICENSE) 
 Paolo Belcastro**
 
 - Website: [paolobelcastro.com](https://paolobelcastro.com)
-- GitHub: [@paolobelcastro](https://github.com/paolobelcastro)
+- GitHub: [@p3ob7o](https://github.com/p3ob7o)
 
 ## 💬 Support
 
 For support, feature requests, or bug reports:
 
 1. Check the [FAQ](#-frequently-asked-questions) section below
-2. Search existing [GitHub Issues](https://github.com/yourusername/agentic-social/issues)
+2. Search existing [GitHub Issues](https://github.com/p3ob7o/agentic-social/issues)
 3. Create a new issue with detailed information
 4. Visit [paolobelcastro.com/agentic-social](https://paolobelcastro.com/agentic-social)
 
