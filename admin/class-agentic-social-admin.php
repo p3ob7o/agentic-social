@@ -492,7 +492,177 @@ class Agentic_Social_Admin {
 	 * @since    1.0.0
 	 */
 	public function register_settings() {
-		register_setting( 'agentic_social_settings_group', 'agentic_social_settings', array( $this, 'validate_settings' ) );
+		// Register the main settings
+		register_setting( 
+			'agentic_social_settings_group', 
+			'agentic_social_settings', 
+			array( 
+				'sanitize_callback' => array( $this, 'validate_settings' ),
+				'default' => array()
+			) 
+		);
+		
+		// Add settings section
+		add_settings_section(
+			'agentic_social_general_section',
+			__( 'General Settings', 'agentic-social' ),
+			array( $this, 'general_section_callback' ),
+			'agentic_social_settings_group'
+		);
+		
+		// Add individual settings fields
+		add_settings_field(
+			'linkedin_enabled',
+			__( 'Enable LinkedIn Sharing', 'agentic-social' ),
+			array( $this, 'linkedin_enabled_callback' ),
+			'agentic_social_settings_group',
+			'agentic_social_general_section'
+		);
+		
+		add_settings_field(
+			'auto_share',
+			__( 'Auto Share', 'agentic-social' ),
+			array( $this, 'auto_share_callback' ),
+			'agentic_social_settings_group',
+			'agentic_social_general_section'
+		);
+		
+		add_settings_field(
+			'share_delay',
+			__( 'Share Delay (minutes)', 'agentic-social' ),
+			array( $this, 'share_delay_callback' ),
+			'agentic_social_settings_group',
+			'agentic_social_general_section'
+		);
+		
+		add_settings_field(
+			'default_post_types',
+			__( 'Post Types', 'agentic-social' ),
+			array( $this, 'post_types_callback' ),
+			'agentic_social_settings_group',
+			'agentic_social_general_section'
+		);
+		
+		add_settings_field(
+			'add_link_as_comment',
+			__( 'Add Link as Comment', 'agentic-social' ),
+			array( $this, 'add_link_as_comment_callback' ),
+			'agentic_social_settings_group',
+			'agentic_social_general_section'
+		);
+		
+		add_settings_field(
+			'enable_ai_agent',
+			__( 'Enable AI Agent Mode', 'agentic-social' ),
+			array( $this, 'enable_ai_agent_callback' ),
+			'agentic_social_settings_group',
+			'agentic_social_general_section'
+		);
+	}
+	
+	/**
+	 * General section callback.
+	 *
+	 * @since    1.0.0
+	 */
+	public function general_section_callback() {
+		echo '<p>' . esc_html__( 'Configure the general settings for Agentic Social sharing.', 'agentic-social' ) . '</p>';
+	}
+	
+	/**
+	 * LinkedIn enabled field callback.
+	 *
+	 * @since    1.0.0
+	 */
+	public function linkedin_enabled_callback() {
+		$settings = get_option( 'agentic_social_settings', array() );
+		$value = isset( $settings['linkedin_enabled'] ) ? $settings['linkedin_enabled'] : false;
+		?>
+		<input type="checkbox" id="linkedin_enabled" name="agentic_social_settings[linkedin_enabled]" value="1" <?php checked( $value, true ); ?> />
+		<p class="description"><?php esc_html_e( 'Enable sharing posts to LinkedIn.', 'agentic-social' ); ?></p>
+		<?php
+	}
+	
+	/**
+	 * Auto share field callback.
+	 *
+	 * @since    1.0.0
+	 */
+	public function auto_share_callback() {
+		$settings = get_option( 'agentic_social_settings', array() );
+		$value = isset( $settings['auto_share'] ) ? $settings['auto_share'] : false;
+		?>
+		<input type="checkbox" id="auto_share" name="agentic_social_settings[auto_share]" value="1" <?php checked( $value, true ); ?> />
+		<p class="description"><?php esc_html_e( 'Automatically share new posts when published.', 'agentic-social' ); ?></p>
+		<?php
+	}
+	
+	/**
+	 * Share delay field callback.
+	 *
+	 * @since    1.0.0
+	 */
+	public function share_delay_callback() {
+		$settings = get_option( 'agentic_social_settings', array() );
+		$value = isset( $settings['share_delay'] ) ? $settings['share_delay'] : 5;
+		?>
+		<input type="number" id="share_delay" name="agentic_social_settings[share_delay]" value="<?php echo esc_attr( $value ); ?>" min="0" max="60" />
+		<p class="description"><?php esc_html_e( 'Delay in minutes before sharing after publishing.', 'agentic-social' ); ?></p>
+		<?php
+	}
+	
+	/**
+	 * Post types field callback.
+	 *
+	 * @since    1.0.0
+	 */
+	public function post_types_callback() {
+		$settings = get_option( 'agentic_social_settings', array() );
+		$selected_types = isset( $settings['default_post_types'] ) ? $settings['default_post_types'] : array( 'post' );
+		$post_types = get_post_types( array( 'public' => true ), 'objects' );
+		
+		foreach ( $post_types as $post_type ) {
+			if ( 'attachment' === $post_type->name ) {
+				continue;
+			}
+			?>
+			<label style="display: block; margin-bottom: 5px;">
+				<input type="checkbox" name="agentic_social_settings[default_post_types][]" value="<?php echo esc_attr( $post_type->name ); ?>" <?php checked( in_array( $post_type->name, $selected_types, true ) ); ?> />
+				<?php echo esc_html( $post_type->label ); ?>
+			</label>
+			<?php
+		}
+		?>
+		<p class="description"><?php esc_html_e( 'Select which post types can be shared.', 'agentic-social' ); ?></p>
+		<?php
+	}
+	
+	/**
+	 * Add link as comment field callback.
+	 *
+	 * @since    1.0.0
+	 */
+	public function add_link_as_comment_callback() {
+		$settings = get_option( 'agentic_social_settings', array() );
+		$value = isset( $settings['add_link_as_comment'] ) ? $settings['add_link_as_comment'] : true;
+		?>
+		<input type="checkbox" id="add_link_as_comment" name="agentic_social_settings[add_link_as_comment]" value="1" <?php checked( $value, true ); ?> />
+		<p class="description"><?php esc_html_e( 'Add post links as comments instead of in the main post (better for platform algorithms).', 'agentic-social' ); ?></p>
+		<?php
+	}
+	
+	/**
+	 * Enable AI agent field callback.
+	 *
+	 * @since    1.0.0
+	 */
+	public function enable_ai_agent_callback() {
+		$settings = get_option( 'agentic_social_settings', array() );
+		$value = isset( $settings['enable_ai_agent'] ) ? $settings['enable_ai_agent'] : false;
+		?>
+		<input type="checkbox" id="enable_ai_agent" name="agentic_social_settings[enable_ai_agent]" value="1" <?php checked( $value, true ); ?> />
+		<p class="description"><?php esc_html_e( 'Design interactions for AI agentic browsers like Perplexity\'s Comet.', 'agentic-social' ); ?></p>
+		<?php
 	}
 	
 	/**
