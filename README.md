@@ -152,7 +152,7 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 
 ## 📝 Changelog
 
-### Version 1.0.0
+### Version 1.0.1
 
 - Initial release
 - LinkedIn integration foundation
