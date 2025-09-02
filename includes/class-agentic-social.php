@@ -69,7 +69,7 @@ class Agentic_Social {
 		if ( defined( 'AGENTIC_SOCIAL_VERSION' ) ) {
 			$this->version = AGENTIC_SOCIAL_VERSION;
 		} else {
-			$this->version = '1.0.2';
+			$this->version = '1.0.3';
 		}
 		$this->plugin_name = 'agentic-social';
 

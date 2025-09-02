@@ -152,6 +152,10 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 
 ## 📝 Changelog
 
+### Version 1.0.3
+
+- Version increment for upcoming changes
+
 ### Version 1.0.2
 
 - Replaced sidebar meta box with full-screen post-publish overlay
