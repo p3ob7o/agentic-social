@@ -35,14 +35,7 @@
 			$( document ).on( 'click', '.copy-summary', this.handleCopySummary );
 			$( document ).on( 'click', '.copy-link', this.handleCopyLink );
 			
-			// Summary regeneration
-			$( document ).on( 'click', '.regenerate-summary', this.handleRegenerateSummary );
-			
-			// AI automation
-			$( document ).on( 'click', '.start-automation', this.handleStartAutomation );
-			
-			// Mark as shared
-			$( document ).on( 'click', '.mark-shared', this.handleMarkShared );
+			// Remove advanced features in simplified mode
 			
 			// Legacy events for settings pages
 			$( document ).on( 'click', '#agentic-social-share-now', this.handleShareNow );

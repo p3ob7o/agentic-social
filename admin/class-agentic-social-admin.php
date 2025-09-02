@@ -217,16 +217,8 @@ class Agentic_Social_Admin {
 			return;
 		}
 		
-		// Check if this post type is enabled for sharing
-		$settings = get_option( 'agentic_social_settings', array() );
-		$enabled_types = isset( $settings['default_post_types'] ) ? $settings['default_post_types'] : array( 'post' );
-		
-		if ( ! in_array( $post->post_type, $enabled_types, true ) ) {
-			return;
-		}
-		
-		// Check if LinkedIn sharing is enabled
-		if ( ! isset( $settings['linkedin_enabled'] ) || ! $settings['linkedin_enabled'] ) {
+		// Only proceed for standard posts
+		if ( 'post' !== $post->post_type ) {
 			return;
 		}
 		
@@ -291,23 +283,12 @@ class Agentic_Social_Admin {
 			return;
 		}
 		
-		// Get settings and check if we should show overlay
-		$settings = get_option( 'agentic_social_settings', array() );
-		
-		// Check if LinkedIn is enabled
-		if ( ! isset( $settings['linkedin_enabled'] ) || ! $settings['linkedin_enabled'] ) {
-			// LinkedIn not enabled, don't show overlay
+		// Only for standard posts
+		if ( 'post' !== $post->post_type ) {
 			return;
 		}
 		
-		// Check if this post type is enabled
-		$enabled_types = isset( $settings['default_post_types'] ) ? $settings['default_post_types'] : array( 'post' );
-		if ( ! in_array( $post->post_type, $enabled_types, true ) ) {
-			// Post type not enabled for sharing
-			return;
-		}
-		
-		$ai_mode = isset( $settings['enable_ai_agent'] ) && $settings['enable_ai_agent'];
+		$ai_mode = false;
 		
 		// Generate summary immediately
 		$sharing_data = Agentic_Social_Content_Processor::get_sharing_data( $post_id );
@@ -332,120 +313,28 @@ class Agentic_Social_Admin {
 						<div class="summary-section">
 							<h4><?php esc_html_e( 'Generated LinkedIn Post', 'agentic-social' ); ?></h4>
 							<div class="summary-container">
-								<textarea id="linkedin-summary" rows="6" readonly><?php echo esc_textarea( $sharing_data['linkedin_summary'] ); ?></textarea>
+								<textarea id="linkedin-summary" rows="8" readonly><?php echo esc_textarea( $sharing_data['linkedin_summary'] ); ?></textarea>
 								<div class="summary-actions">
-									<button type="button" class="button regenerate-summary" data-post-id="<?php echo esc_attr( $post_id ); ?>">
-										<?php esc_html_e( '🔄 Regenerate', 'agentic-social' ); ?>
-									</button>
-									<button type="button" class="button copy-summary">
-										<?php esc_html_e( '📋 Copy Text', 'agentic-social' ); ?>
-									</button>
+									<button type="button" class="button copy-summary"><?php esc_html_e( '📋 Copy Text', 'agentic-social' ); ?></button>
+									<a href="https://www.linkedin.com/feed/?shareActive=true" target="_blank" class="button button-primary"><?php esc_html_e( '🚀 Open LinkedIn New Post', 'agentic-social' ); ?></a>
 								</div>
 							</div>
 						</div>
 						
-						<div class="linkedin-section">
-							<div class="linkedin-options">
-								<div class="option-tabs">
-									<button class="tab-button active" data-tab="iframe"><?php esc_html_e( '🌐 LinkedIn (Embedded)', 'agentic-social' ); ?></button>
-									<button class="tab-button" data-tab="newwindow"><?php esc_html_e( '🔗 LinkedIn (New Window)', 'agentic-social' ); ?></button>
-								</div>
-								
-								<div class="tab-content active" data-tab="iframe">
-									<div class="iframe-container">
-										<iframe id="linkedin-iframe" src="about:blank" frameborder="0"></iframe>
-										<div class="iframe-overlay">
-											<button class="button button-primary load-linkedin" 
-											        <?php echo $ai_mode ? 'data-agentic-action="load-linkedin"' : ''; ?>>
-												<?php esc_html_e( '📱 Load LinkedIn', 'agentic-social' ); ?>
-											</button>
-											<p><?php esc_html_e( 'Click to load LinkedIn in the frame below', 'agentic-social' ); ?></p>
-										</div>
-									</div>
-								</div>
-								
-								<div class="tab-content" data-tab="newwindow">
-									<div class="newwindow-actions">
-										<a href="https://www.linkedin.com/feed/" target="_blank" class="button button-primary"
-										   <?php echo $ai_mode ? 'data-agentic-action="open-linkedin-window"' : ''; ?>>
-											<?php esc_html_e( '🚀 Open LinkedIn', 'agentic-social' ); ?>
-										</a>
-										<p><?php esc_html_e( 'Opens LinkedIn in a new window/tab', 'agentic-social' ); ?></p>
-									</div>
+						<div class="comment-section">
+							<h4><?php esc_html_e( 'First Comment (Link to your post)', 'agentic-social' ); ?></h4>
+							<div class="summary-container">
+								<textarea id="linkedin-comment" rows="4" readonly><?php echo esc_textarea( get_permalink( $post_id ) ); ?></textarea>
+								<div class="summary-actions">
+									<button type="button" class="button copy-link" data-url="<?php echo esc_attr( get_permalink( $post_id ) ); ?>"><?php esc_html_e( '📋 Copy Link', 'agentic-social' ); ?></button>
 								</div>
 							</div>
-						</div>
-						
-						<?php if ( $ai_mode ) : ?>
-							<div class="ai-automation-section">
-								<h4><?php esc_html_e( '🤖 AI Agent Automation', 'agentic-social' ); ?></h4>
-								<div class="automation-controls">
-									<button type="button" class="button button-primary start-automation"
-									        data-post-id="<?php echo esc_attr( $post_id ); ?>"
-									        data-agentic-action="start-full-automation">
-										<?php esc_html_e( '⚡ Automate Full Process', 'agentic-social' ); ?>
-									</button>
-									<p><?php esc_html_e( 'Let AI agent handle the complete LinkedIn sharing process', 'agentic-social' ); ?></p>
-								</div>
-								
-								<div class="automation-steps" style="display: none;">
-									<div class="step-progress">
-										<div class="step" data-step="1">
-											<span class="step-number">1</span>
-											<span class="step-text"><?php esc_html_e( 'Opening LinkedIn', 'agentic-social' ); ?></span>
-											<span class="step-status">⏳</span>
-										</div>
-										<div class="step" data-step="2">
-											<span class="step-number">2</span>
-											<span class="step-text"><?php esc_html_e( 'Creating Post', 'agentic-social' ); ?></span>
-											<span class="step-status">⏳</span>
-										</div>
-										<div class="step" data-step="3">
-											<span class="step-number">3</span>
-											<span class="step-text"><?php esc_html_e( 'Adding Content', 'agentic-social' ); ?></span>
-											<span class="step-status">⏳</span>
-										</div>
-										<div class="step" data-step="4">
-											<span class="step-number">4</span>
-											<span class="step-text"><?php esc_html_e( 'Publishing', 'agentic-social' ); ?></span>
-											<span class="step-status">⏳</span>
-										</div>
-										<div class="step" data-step="5">
-											<span class="step-number">5</span>
-											<span class="step-text"><?php esc_html_e( 'Adding Link Comment', 'agentic-social' ); ?></span>
-											<span class="step-status">⏳</span>
-										</div>
-									</div>
-								</div>
-							</div>
-						<?php endif; ?>
-						
-						<div class="manual-instructions">
-							<h4><?php esc_html_e( '📝 Manual Steps', 'agentic-social' ); ?></h4>
-							<ol>
-								<li><?php esc_html_e( 'Copy the generated text above', 'agentic-social' ); ?></li>
-								<li><?php esc_html_e( 'Open LinkedIn (using button above)', 'agentic-social' ); ?></li>
-								<li><?php esc_html_e( 'Click "Start a post" on LinkedIn', 'agentic-social' ); ?></li>
-								<li><?php esc_html_e( 'Paste the copied content', 'agentic-social' ); ?></li>
-								<li><?php esc_html_e( 'Publish your post', 'agentic-social' ); ?></li>
-								<li><?php esc_html_e( 'Add this link as first comment:', 'agentic-social' ); ?> 
-									<code class="post-link-for-comment"><?php echo esc_html( get_permalink( $post_id ) ); ?></code>
-									<button class="button copy-link" data-url="<?php echo esc_attr( get_permalink( $post_id ) ); ?>">
-										<?php esc_html_e( 'Copy Link', 'agentic-social' ); ?>
-									</button>
-								</li>
-							</ol>
 						</div>
 					</div>
 				</div>
 				
 				<div class="overlay-footer">
-					<button class="button mark-shared" data-post-id="<?php echo esc_attr( $post_id ); ?>">
-						<?php esc_html_e( '✅ Mark as Shared', 'agentic-social' ); ?>
-					</button>
-					<button class="button skip-sharing">
-						<?php esc_html_e( '⏭️ Skip for Now', 'agentic-social' ); ?>
-					</button>
+					<button class="button skip-sharing"><?php esc_html_e( 'Close', 'agentic-social' ); ?></button>
 				</div>
 			</div>
 		</div>
